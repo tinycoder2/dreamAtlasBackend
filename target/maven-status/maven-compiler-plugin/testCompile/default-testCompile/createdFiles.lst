@@ -1,0 +1,4 @@
+com/example/dreamjournal/repository/firestore/FirestoreRepositoryIntegrationTest.class
+com/example/dreamjournal/controller/ValidationControllerTest.class
+com/example/dreamjournal/service/DreamServiceTest.class
+com/example/dreamjournal/service/DayLogServiceTest.class

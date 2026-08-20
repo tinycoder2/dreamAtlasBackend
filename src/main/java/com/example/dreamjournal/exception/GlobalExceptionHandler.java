@@ -3,6 +3,8 @@ package com.example.dreamjournal.exception;
 import com.example.dreamjournal.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
@@ -42,6 +46,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(FirestoreOperationException.class)
     ResponseEntity<ErrorResponse> handleFirestore(FirestoreOperationException ex, HttpServletRequest request) {
+        logger.error("Firestore operation failed: {}", ex.getMessage(), ex);
         return error(HttpStatus.SERVICE_UNAVAILABLE, "Datastore operation failed", request);
     }
 

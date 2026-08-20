@@ -5,11 +5,14 @@ import com.example.dreamjournal.model.Dream;
 import com.example.dreamjournal.repository.DayLogRepository;
 import com.example.dreamjournal.repository.DreamRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +33,8 @@ class FirestoreRepositoryIntegrationTest {
 
     @Test
     void coversFirestoreCrudFlowsAndUserIsolation() {
+        assumeFirestoreEmulatorIsReachable();
+
         String userId = "user-" + UUID.randomUUID();
         String otherUserId = "user-" + UUID.randomUUID();
         LocalDate date = LocalDate.parse("2026-08-18");
@@ -61,5 +66,18 @@ class FirestoreRepositoryIntegrationTest {
         dayLogRepository.delete(userId, date);
         assertThat(dayLogRepository.findByUserIdAndDate(userId, date)).isEmpty();
         assertThat(dreamRepository.findByUserIdAndDate(userId, date)).isEmpty();
+    }
+
+    private void assumeFirestoreEmulatorIsReachable() {
+        String emulatorHost = System.getenv("FIRESTORE_EMULATOR_HOST");
+        String[] parts = emulatorHost.split(":", 2);
+        String host = parts[0];
+        int port = parts.length == 2 ? Integer.parseInt(parts[1]) : 8080;
+
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), 500);
+        } catch (Exception ex) {
+            Assumptions.abort("Firestore emulator is not reachable at " + emulatorHost);
+        }
     }
 }

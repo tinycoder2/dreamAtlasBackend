@@ -24,6 +24,7 @@ app.cors.allowed-origins=http://localhost:8081,http://localhost:3000
 ```
 
 The app uses Google Application Default Credentials in normal mode. It never expects a committed service-account JSON file.
+If the app fails at startup with `google.cloud.project-id must be configured`, set `GOOGLE_CLOUD_PROJECT_ID` or provide `google.cloud.project-id` in a local Spring profile.
 
 ## Google Cloud Setup
 

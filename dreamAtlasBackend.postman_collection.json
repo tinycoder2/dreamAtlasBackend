@@ -1,0 +1,332 @@
+{
+  "info": {
+    "_postman_id": "cb8486ea-eae4-47bd-9533-53b81016706f",
+    "name": "dreamAtlasBackend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "19673800"
+  },
+  "item": [
+    {
+      "name": "days",
+      "item": [
+        {
+          "name": "PUT DAY",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"sleepHours\": 7.5,\n    \"sleepQuality\": \"GOOD\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET DAY",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEL DAY",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET ALL DAYS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET DAY W RANGE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days?from=2026-08-01&to=2026-08-31",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-08-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-08-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "day+dream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/details",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "details"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "dreams",
+      "item": [
+        {
+          "name": "dream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/dreams/0tOwTba1eUJfDqRMWEx6",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "dreams",
+                "0tOwTba1eUJfDqRMWEx6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update dream",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"text\": \"I was flying over a vast ocean, and then I woke up.\",\n    \"mood\": \"CONFUSED\",\n    \"dreamType\": \"NORMAL\",\n    \"tags\": [\"flying\", \"ocean\"],\n    \"sortOrder\": 1\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/dreams/0tOwTba1eUJfDqRMWEx6",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "dreams",
+                "0tOwTba1eUJfDqRMWEx6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "del dream",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/dreams/dream456",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "dreams",
+                "dream456"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list dream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/dreams",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "dreams"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST DREAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"text\": \"I was flying over a vast forest...\",\n    \"mood\": \"PEACEFUL\",\n    \"dreamType\": \"LUCID\",\n    \"tags\": [\"flying\", \"trees\", \"lucid\"],\n    \"sortOrder\": 0\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8081/api/users/user123/days/2026-08-18/dreams",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8081",
+              "path": [
+                "api",
+                "users",
+                "user123",
+                "days",
+                "2026-08-18",
+                "dreams"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

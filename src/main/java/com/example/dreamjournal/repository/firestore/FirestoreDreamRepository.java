@@ -218,4 +218,111 @@ public class FirestoreDreamRepository implements DreamRepository {
             );
         }
     }
+
+    @Override
+    public List<Dream> search(
+            String userId,
+            String text,
+            String mood,
+            String dreamType,
+            String tag
+    ) {
+        try {
+            var snapshots = firestore.collectionGroup("dreams")
+                    .get()
+                    .get();
+
+            String normalizedText =
+                    text == null ? null : text.trim().toLowerCase();
+
+            String normalizedMood =
+                    mood == null ? null : mood.trim().toLowerCase();
+
+            String normalizedDreamType =
+                    dreamType == null ? null : dreamType.trim().toLowerCase();
+
+            String normalizedTag =
+                    tag == null ? null : tag.trim().toLowerCase();
+
+            List<Dream> results = new ArrayList<>();
+
+            for (var document : snapshots.getDocuments()) {
+
+                String[] parts =
+                        document.getReference().getPath().split("/");
+
+                // users/{userId}/days/{date}/dreams/{dreamId}
+                if (parts.length != 6) {
+                    continue;
+                }
+
+                if (!parts[1].equals(userId)) {
+                    continue;
+                }
+
+                LocalDate date = LocalDate.parse(parts[3]);
+                Dream dream = FirestoreMapper.toDream(date, document);
+
+                if (normalizedText != null
+                        && !normalizedText.isBlank()
+                        && !dream.text().toLowerCase()
+                        .contains(normalizedText)) {
+                    continue;
+                }
+
+                if (normalizedMood != null
+                        && !normalizedMood.isBlank()
+                        && (dream.mood() == null
+                        || !dream.mood().toString()
+                        .toLowerCase()
+                        .equals(normalizedMood))) {
+                    continue;
+                }
+
+                if (normalizedDreamType != null
+                        && !normalizedDreamType.isBlank()
+                        && (dream.dreamType() == null
+                        || !dream.dreamType().toString()
+                        .toLowerCase()
+                        .equals(normalizedDreamType))) {
+                    continue;
+                }
+
+                if (normalizedTag != null
+                        && !normalizedTag.isBlank()) {
+
+                    boolean matchesTag = dream.tags() != null
+                            && dream.tags().stream()
+                            .anyMatch(t ->
+                                    t != null
+                                            && t.toLowerCase()
+                                            .equals(normalizedTag));
+
+                    if (!matchesTag) {
+                        continue;
+                    }
+                }
+
+                results.add(dream);
+            }
+
+            return results.stream()
+                    .sorted(
+                            Comparator
+                                    .comparing(
+                                            Dream::date,
+                                            Comparator.reverseOrder()
+                                    )
+                                    .thenComparing(Dream::sortOrder)
+                                    .thenComparing(Dream::createdAt)
+                    )
+                    .toList();
+
+        } catch (Exception ex) {
+            throw new FirestoreOperationException(
+                    "Failed to search dreams",
+                    ex
+            );
+        }
+    }
 }

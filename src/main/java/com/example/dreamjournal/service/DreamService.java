@@ -146,6 +146,24 @@ public class DreamService {
         return dreamRepository.findRecentTags(userId);
     }
 
+    public List<Dream> search(
+            String userId,
+            String text,
+            String mood,
+            String dreamType,
+            String tag
+    ) {
+        RequestGuards.requireUserId(userId);
+
+        return dreamRepository.search(
+                userId,
+                text,
+                mood,
+                dreamType,
+                tag
+        );
+    }
+
     private List<String> normalizeTags(List<String> tags) {
         if (tags == null) {
             return List.of();

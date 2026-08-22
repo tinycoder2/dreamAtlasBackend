@@ -26,4 +26,12 @@ public interface DreamRepository {
     );
 
     List<String> findRecentTags(String userId);
+
+    List<Dream> search(
+            String userId,
+            String text,
+            String mood,
+            String dreamType,
+            String tag
+    );
 }

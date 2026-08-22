@@ -112,4 +112,13 @@ public class DreamController {
                 .map(DreamResponse::from)
                 .toList();
     }
+
+    @GetMapping("/tags/recent")
+    @Operation(summary = "Get recent dream tags")
+    @ApiResponse(responseCode = "200", description = "Recent tags returned")
+    public List<String> recentTags(
+            @PathVariable String userId
+    ) {
+        return dreamService.findRecentTags(userId);
+    }
 }

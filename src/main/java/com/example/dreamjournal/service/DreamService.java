@@ -140,6 +140,12 @@ public class DreamService {
         );
     }
 
+    public List<String> findRecentTags(String userId) {
+        RequestGuards.requireUserId(userId);
+
+        return dreamRepository.findRecentTags(userId);
+    }
+
     private List<String> normalizeTags(List<String> tags) {
         if (tags == null) {
             return List.of();

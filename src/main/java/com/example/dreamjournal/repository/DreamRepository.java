@@ -24,4 +24,6 @@ public interface DreamRepository {
             LocalDate date,
             List<String> orderedIds
     );
+
+    List<String> findRecentTags(String userId);
 }

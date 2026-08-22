@@ -12,8 +12,7 @@ import com.google.cloud.firestore.WriteBatch;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Repository
 public class FirestoreDreamRepository implements DreamRepository {
@@ -163,6 +162,58 @@ public class FirestoreDreamRepository implements DreamRepository {
         } catch (Exception ex) {
             throw new FirestoreOperationException(
                     "Failed to reorder dreams",
+                    ex
+            );
+        }
+    }
+
+    @Override
+    public List<String> findRecentTags(String userId) {
+        try {
+            var query = firestore.collectionGroup("dreams")
+                    .orderBy("createdAt", Query.Direction.DESCENDING);
+
+            var snapshots = query.get().get();
+
+            Set<String> tags = new LinkedHashSet<>();
+
+            for (var document : snapshots.getDocuments()) {
+                // Dream document:
+                // users/{userId}/days/{date}/dreams/{dreamId}
+                String path = document.getReference().getPath();
+
+                String[] parts = path.split("/");
+
+                if (parts.length != 6) {
+                    continue;
+                }
+
+                String documentUserId = parts[1];
+
+                if (!documentUserId.equals(userId)) {
+                    continue;
+                }
+
+                List<String> dreamTags = document.toObject(
+                        FirestoreDreamDocument.class
+                ).getTags();
+
+                if (dreamTags == null) {
+                    continue;
+                }
+
+                for (String tag : dreamTags) {
+                    if (tag != null && !tag.isBlank()) {
+                        tags.add(tag);
+                    }
+                }
+            }
+
+            return new ArrayList<>(tags);
+
+        } catch (Exception ex) {
+            throw new FirestoreOperationException(
+                    "Failed to get recent tags",
                     ex
             );
         }

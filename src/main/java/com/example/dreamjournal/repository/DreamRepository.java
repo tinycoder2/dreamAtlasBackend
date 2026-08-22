@@ -19,4 +19,9 @@ public interface DreamRepository {
     boolean delete(String userId, LocalDate date, String dreamId);
 
     int deleteAllForDate(String userId, LocalDate date);
+    List<Dream> reorder(
+            String userId,
+            LocalDate date,
+            List<String> orderedIds
+    );
 }

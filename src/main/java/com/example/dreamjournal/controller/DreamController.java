@@ -1,5 +1,6 @@
 package com.example.dreamjournal.controller;
 
+import com.example.dreamjournal.dto.DreamReorderRequest;
 import com.example.dreamjournal.dto.DreamRequest;
 import com.example.dreamjournal.dto.DreamResponse;
 import com.example.dreamjournal.service.DreamService;
@@ -45,6 +46,25 @@ public class DreamController {
         DreamResponse response = DreamResponse.from(dreamService.create(userId, date, request));
         URI location = URI.create("/api/users/%s/days/%s/dreams/%s".formatted(userId, date, response.id()));
         return ResponseEntity.created(location).body(response);
+    }
+
+    @PutMapping("/order")
+    @Operation(summary = "Reorder dreams for a date")
+    @ApiResponse(responseCode = "200", description = "Dreams reordered")
+    @ApiResponse(responseCode = "400", description = "Invalid request")
+    public List<DreamResponse> reorder(
+            @PathVariable String userId,
+            @PathVariable String date,
+            @Valid @RequestBody DreamReorderRequest request
+    ) {
+        return dreamService.reorder(
+                        userId,
+                        date,
+                        request.orderedIds()
+                )
+                .stream()
+                .map(DreamResponse::from)
+                .toList();
     }
 
     @GetMapping("/{dreamId}")

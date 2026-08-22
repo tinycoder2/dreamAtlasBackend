@@ -127,4 +127,44 @@ public class FirestoreDreamRepository implements DreamRepository {
             throw new FirestoreOperationException("Failed to delete dreams", ex);
         }
     }
+    @Override
+    public List<Dream> reorder(
+            String userId,
+            LocalDate date,
+            List<String> orderedIds
+    ) {
+        try {
+            var collection = FirestorePaths.dreamsCollection(
+                    firestore,
+                    userId,
+                    date
+            );
+
+            WriteBatch batch = firestore.batch();
+
+            for (int i = 0; i < orderedIds.size(); i++) {
+                String dreamId = orderedIds.get(i);
+
+                DocumentReference reference = collection.document(dreamId);
+
+                batch.update(
+                        reference,
+                        "sortOrder",
+                        i,
+                        "updatedAt",
+                        com.google.cloud.Timestamp.now()
+                );
+            }
+
+            batch.commit().get();
+
+            return findByUserIdAndDate(userId, date);
+
+        } catch (Exception ex) {
+            throw new FirestoreOperationException(
+                    "Failed to reorder dreams",
+                    ex
+            );
+        }
+    }
 }

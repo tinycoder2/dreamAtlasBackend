@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class DreamService {
@@ -98,6 +95,49 @@ public class DreamService {
         return dreamRepository.findByUserIdAndDate(userId, date).stream()
                 .sorted(Comparator.comparing(Dream::sortOrder).thenComparing(Dream::createdAt))
                 .toList();
+    }
+
+    public List<Dream> reorder(
+            String userId,
+            String dateValue,
+            List<String> orderedIds
+    ) {
+        RequestGuards.requireUserId(userId);
+
+        LocalDate date = DateParser.parse(dateValue);
+
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            throw new IllegalArgumentException("orderedIds must not be empty");
+        }
+
+        // Make sure there are no duplicate IDs.
+        Set<String> uniqueIds = new HashSet<>(orderedIds);
+
+        if (uniqueIds.size() != orderedIds.size()) {
+            throw new IllegalArgumentException(
+                    "orderedIds must not contain duplicates"
+            );
+        }
+
+        // Make sure all supplied IDs actually belong to this date.
+        List<Dream> existingDreams =
+                dreamRepository.findByUserIdAndDate(userId, date);
+
+        Set<String> existingIds = existingDreams.stream()
+                .map(Dream::id)
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (!existingIds.equals(uniqueIds)) {
+            throw new IllegalArgumentException(
+                    "orderedIds must contain exactly the dreams for this date"
+            );
+        }
+
+        return dreamRepository.reorder(
+                userId,
+                date,
+                orderedIds
+        );
     }
 
     private List<String> normalizeTags(List<String> tags) {

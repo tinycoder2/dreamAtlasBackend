@@ -1,9 +1,11 @@
 package com.example.dreamjournal.controller;
 
 import com.example.dreamjournal.dto.DreamResponse;
+import com.example.dreamjournal.security.FirebaseUser;
 import com.example.dreamjournal.service.DreamService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +24,10 @@ public class DreamTagsController {
     @Operation(summary = "Get recent dream tags")
     @ApiResponse(responseCode = "200", description = "Recent tags returned")
     public List<String> recentTags(
-            @PathVariable String userId
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dreamService.findRecentTags(userId);
     }
 
@@ -31,12 +35,14 @@ public class DreamTagsController {
     @Operation(summary = "Search dreams")
     @ApiResponse(responseCode = "200", description = "Matching dreams returned")
     public List<DreamResponse> search(
-            @PathVariable String userId,
             @RequestParam(required = false) String text,
             @RequestParam(required = false) String mood,
             @RequestParam(required = false) String dreamType,
-            @RequestParam(required = false) String tag
+            @RequestParam(required = false) String tag,
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dreamService.search(
                         userId,
                         text,

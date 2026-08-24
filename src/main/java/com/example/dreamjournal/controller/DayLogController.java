@@ -3,10 +3,12 @@ package com.example.dreamjournal.controller;
 import com.example.dreamjournal.dto.DayDetailsResponse;
 import com.example.dreamjournal.dto.DayLogRequest;
 import com.example.dreamjournal.dto.DayLogResponse;
+import com.example.dreamjournal.security.FirebaseUser;
 import com.example.dreamjournal.service.DayLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -38,28 +40,41 @@ public class DayLogController {
     @ApiResponse(responseCode = "200", description = "Day log saved")
     @ApiResponse(responseCode = "400", description = "Invalid request")
     public DayLogResponse upsert(
-            @PathVariable String userId,
             @PathVariable String date,
-            @Valid @RequestBody DayLogRequest request
+            @Valid @RequestBody DayLogRequest request,
+            HttpServletRequest httpRequest
     ) {
-        return DayLogResponse.from(dayLogService.upsert(userId, date, request));
+        String userId = FirebaseUser.getUid(httpRequest);
+
+        return DayLogResponse.from(
+                dayLogService.upsert(userId, date, request)
+        );
     }
 
     @GetMapping("/{date}")
     @Operation(summary = "Get a day log")
     @ApiResponse(responseCode = "200", description = "Day log found")
     @ApiResponse(responseCode = "404", description = "Day log not found")
-    public DayLogResponse get(@PathVariable String userId, @PathVariable String date) {
-        return DayLogResponse.from(dayLogService.get(userId, date));
+    public DayLogResponse get(
+            @PathVariable String date,
+            HttpServletRequest httpRequest
+    ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
+        return DayLogResponse.from(
+                dayLogService.get(userId, date)
+        );
     }
 
     @GetMapping
     @Operation(summary = "List day logs for a user")
     public List<DayLogResponse> list(
-            @PathVariable String userId,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to
+            @RequestParam(required = false) String to,
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dayLogService.list(userId, from, to).stream()
                 .map(DayLogResponse::from)
                 .toList();
@@ -69,8 +84,14 @@ public class DayLogController {
     @Operation(summary = "Delete a day log and all dreams for that day")
     @ApiResponse(responseCode = "204", description = "Day deleted")
     @ApiResponse(responseCode = "404", description = "Day log not found")
-    public ResponseEntity<Void> delete(@PathVariable String userId, @PathVariable String date) {
+    public ResponseEntity<Void> delete(
+            @PathVariable String date,
+            HttpServletRequest httpRequest
+    ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         dayLogService.delete(userId, date);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -78,7 +99,12 @@ public class DayLogController {
     @Operation(summary = "Get combined day sleep and dream details")
     @ApiResponse(responseCode = "200", description = "Day details found")
     @ApiResponse(responseCode = "404", description = "No day log or dreams found")
-    public DayDetailsResponse details(@PathVariable String userId, @PathVariable String date) {
+    public DayDetailsResponse details(
+            @PathVariable String date,
+            HttpServletRequest httpRequest
+    ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dayLogService.details(userId, date);
     }
 }

@@ -3,10 +3,12 @@ package com.example.dreamjournal.controller;
 import com.example.dreamjournal.dto.DreamReorderRequest;
 import com.example.dreamjournal.dto.DreamRequest;
 import com.example.dreamjournal.dto.DreamResponse;
+import com.example.dreamjournal.security.FirebaseUser;
 import com.example.dreamjournal.service.DreamService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -39,12 +41,20 @@ public class DreamController {
     @ApiResponse(responseCode = "201", description = "Dream created")
     @ApiResponse(responseCode = "400", description = "Invalid request")
     public ResponseEntity<DreamResponse> create(
-            @PathVariable String userId,
             @PathVariable String date,
-            @Valid @RequestBody DreamRequest request
+            @Valid @RequestBody DreamRequest request,
+            HttpServletRequest httpRequest
     ) {
-        DreamResponse response = DreamResponse.from(dreamService.create(userId, date, request));
-        URI location = URI.create("/api/users/%s/days/%s/dreams/%s".formatted(userId, date, response.id()));
+        String userId = FirebaseUser.getUid(httpRequest);
+
+        DreamResponse response =
+                DreamResponse.from(dreamService.create(userId, date, request));
+
+        URI location = URI.create(
+                "/api/users/%s/days/%s/dreams/%s"
+                        .formatted(userId, date, response.id())
+        );
+
         return ResponseEntity.created(location).body(response);
     }
 
@@ -53,10 +63,12 @@ public class DreamController {
     @ApiResponse(responseCode = "200", description = "Dreams reordered")
     @ApiResponse(responseCode = "400", description = "Invalid request")
     public List<DreamResponse> reorder(
-            @PathVariable String userId,
             @PathVariable String date,
-            @Valid @RequestBody DreamReorderRequest request
+            @Valid @RequestBody DreamReorderRequest request,
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dreamService.reorder(
                         userId,
                         date,
@@ -72,11 +84,15 @@ public class DreamController {
     @ApiResponse(responseCode = "200", description = "Dream found")
     @ApiResponse(responseCode = "404", description = "Dream not found")
     public DreamResponse get(
-            @PathVariable String userId,
             @PathVariable String date,
-            @PathVariable String dreamId
+            @PathVariable String dreamId,
+            HttpServletRequest httpRequest
     ) {
-        return DreamResponse.from(dreamService.get(userId, date, dreamId));
+        String userId = FirebaseUser.getUid(httpRequest);
+
+        return DreamResponse.from(
+                dreamService.get(userId, date, dreamId)
+        );
     }
 
     @PutMapping("/{dreamId}")
@@ -84,12 +100,16 @@ public class DreamController {
     @ApiResponse(responseCode = "200", description = "Dream updated")
     @ApiResponse(responseCode = "404", description = "Dream not found")
     public DreamResponse update(
-            @PathVariable String userId,
             @PathVariable String date,
             @PathVariable String dreamId,
-            @Valid @RequestBody DreamRequest request
+            @Valid @RequestBody DreamRequest request,
+            HttpServletRequest httpRequest
     ) {
-        return DreamResponse.from(dreamService.update(userId, date, dreamId, request));
+        String userId = FirebaseUser.getUid(httpRequest);
+
+        return DreamResponse.from(
+                dreamService.update(userId, date, dreamId, request)
+        );
     }
 
     @DeleteMapping("/{dreamId}")
@@ -97,17 +117,25 @@ public class DreamController {
     @ApiResponse(responseCode = "204", description = "Dream deleted")
     @ApiResponse(responseCode = "404", description = "Dream not found")
     public ResponseEntity<Void> delete(
-            @PathVariable String userId,
             @PathVariable String date,
-            @PathVariable String dreamId
+            @PathVariable String dreamId,
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         dreamService.delete(userId, date, dreamId);
+
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
     @Operation(summary = "List dreams for a date")
-    public List<DreamResponse> list(@PathVariable String userId, @PathVariable String date) {
+    public List<DreamResponse> list(
+            @PathVariable String date,
+            HttpServletRequest httpRequest
+    ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dreamService.list(userId, date).stream()
                 .map(DreamResponse::from)
                 .toList();
@@ -117,8 +145,10 @@ public class DreamController {
     @Operation(summary = "Get recent dream tags")
     @ApiResponse(responseCode = "200", description = "Recent tags returned")
     public List<String> recentTags(
-            @PathVariable String userId
+            HttpServletRequest httpRequest
     ) {
+        String userId = FirebaseUser.getUid(httpRequest);
+
         return dreamService.findRecentTags(userId);
     }
 }

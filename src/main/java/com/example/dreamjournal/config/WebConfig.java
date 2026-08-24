@@ -1,6 +1,9 @@
 package com.example.dreamjournal.config;
 
+import com.example.dreamjournal.security.FirebaseAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -24,9 +27,21 @@ public class WebConfig implements WebMvcConfigurer {
         if (allowedOrigins.length == 0) {
             return;
         }
+
         registry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
+    }
+
+    @Bean
+    public FilterRegistrationBean<FirebaseAuthenticationFilter> firebaseAuthenticationFilter() {
+        FilterRegistrationBean<FirebaseAuthenticationFilter> registration = new FilterRegistrationBean<>();
+
+        registration.setFilter(new FirebaseAuthenticationFilter());
+        registration.addUrlPatterns("/api/*");
+        registration.setOrder(1);
+
+        return registration;
     }
 }

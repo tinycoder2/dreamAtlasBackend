@@ -1,6 +1,7 @@
 package com.example.dreamjournal.service;
 
 import com.example.dreamjournal.dto.DreamRequest;
+import com.example.dreamjournal.dto.GeminiDreamResponse;
 import com.example.dreamjournal.exception.ResourceNotFoundException;
 import com.example.dreamjournal.model.Dream;
 import com.example.dreamjournal.repository.DreamRepository;
@@ -162,6 +163,37 @@ public class DreamService {
                 dreamType,
                 tag
         );
+    }
+    public List<Dream> createFromGemini(
+            String userId,
+            String dateValue,
+            GeminiDreamResponse geminiResponse
+    ) {
+        RequestGuards.requireUserId(userId);
+        LocalDate date = DateParser.parse(dateValue);
+
+        if (geminiResponse == null || geminiResponse.dreams() == null) {
+            return List.of();
+        }
+
+        List<Dream> created = new ArrayList<>();
+
+        for (int i = 0; i < geminiResponse.dreams().size(); i++) {
+            GeminiDreamResponse.GeminiDream geminiDream =
+                    geminiResponse.dreams().get(i);
+
+            DreamRequest request = new DreamRequest(
+                    geminiDream.text(),
+                    geminiDream.mood(),
+                    geminiDream.dreamType(),
+                    geminiDream.tags(),
+                    i
+            );
+
+            created.add(create(userId, dateValue, request));
+        }
+
+        return created;
     }
 
     private List<String> normalizeTags(List<String> tags) {

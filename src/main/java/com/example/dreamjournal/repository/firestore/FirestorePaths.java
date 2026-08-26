@@ -21,4 +21,13 @@ final class FirestorePaths {
     static CollectionReference dreamsCollection(Firestore firestore, String userId, LocalDate date) {
         return dayDocument(firestore, userId, date).collection("dreams");
     }
+
+    static CollectionReference weeklyInsightsCollection(
+            Firestore firestore,
+            String userId
+    ) {
+        return firestore.collection("users")
+                .document(userId)
+                .collection("weeklyInsights");
+    }
 }

@@ -1,6 +1,8 @@
 package com.example.dreamjournal.service;
 
 import com.example.dreamjournal.dto.GeminiDreamResponse;
+import com.example.dreamjournal.dto.GeminiWeeklyInsightResponse;
+import com.example.dreamjournal.model.Dream;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.Content;
@@ -156,7 +158,173 @@ public class GeminiService {
         }
     }
 
+    public GeminiWeeklyInsightResponse generateWeeklyInsights(
+            List<Dream> dreams
+    ) {
+        StringBuilder dreamsText = new StringBuilder();
 
+        for (int i = 0; i < dreams.size(); i++) {
+            Dream dream = dreams.get(i);
+
+            dreamsText.append("""
+                Dream %d
+                Date: %s
+                Text: %s
+
+                """.formatted(
+                    i + 1,
+                    dream.date(),
+                    dream.text()
+            ));
+        }
+
+        String prompt = """
+            You are a dream journal assistant generating weekly
+            dream insights for personal reflection and self-exploration.
+
+            Analyze ONLY the dreams provided below.
+
+            Your job is to identify meaningful recurring patterns
+            across the dreams.
+
+            WEEKLY SUMMARY:
+            - Write one short, concise summary of the overall themes
+              and direction of the week's dreams.
+            - Do not make psychological diagnoses.
+            - Do not claim certainty about the user's psychological state.
+
+            RECURRING THEMES:
+            - Identify 1 to 5 meaningful recurring themes.
+            - Only include themes supported by multiple dreams or
+              strong evidence within the week's dreams.
+            - Give each theme a prominence score from 0 to 100.
+            - The prominence score represents how strongly the theme
+              appears within this week's dreams.
+            - It is NOT a probability or psychological measurement.
+            - Use concise uppercase names such as CHANGE, CONTROL,
+              RELATIONSHIPS, SEARCHING.
+
+            EMOTIONAL PATTERNS:
+            - Identify 0 to 3 meaningful recurring emotional patterns.
+            - Do NOT invent emotional patterns just to reach three.
+            - If there is insufficient evidence, return an empty array.
+            - For each pattern, describe the recurring emotional
+              experience.
+            - Include a relevant Jungian-inspired concept only when
+              genuinely appropriate.
+            - The Jungian concept is optional and may be null.
+            - Give a short, tentative interpretation.
+            - Use language such as "may suggest", "could reflect",
+              or "might point toward".
+            - Do not diagnose or provide treatment.
+
+            Do not invent events, emotions, themes, or patterns that
+            are not reasonably supported by the dreams.
+
+            Dreams from this week:
+
+            """ + dreamsText;
+
+        GenerateContentConfig config = GenerateContentConfig.builder()
+                .temperature(0.2F)
+                .responseMimeType("application/json")
+                .responseSchema(weeklyInsightSchema())
+                .build();
+
+        GenerateContentResponse response =
+                client.models.generateContent(
+                        "gemini-2.5-flash",
+                        prompt,
+                        config
+                );
+
+        return parseWeeklyInsightResponse(response);
+    }
+
+    private GeminiWeeklyInsightResponse parseWeeklyInsightResponse(
+            GenerateContentResponse response
+    ) {
+        try {
+            return objectMapper.readValue(
+                    response.text(),
+                    GeminiWeeklyInsightResponse.class
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse Gemini weekly insight response",
+                    e
+            );
+        }
+    }
+
+    private Schema weeklyInsightSchema() {
+        Schema themeSchema = Schema.builder()
+                .type(Type.Known.OBJECT)
+                .properties(Map.of(
+                        "name",
+                        Schema.builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+
+                        "prominence",
+                        Schema.builder()
+                                .type(Type.Known.INTEGER)
+                                .build()
+                ))
+                .required(List.of("name", "prominence"))
+                .build();
+
+        Schema emotionalPatternSchema = Schema.builder()
+                .type(Type.Known.OBJECT)
+                .properties(Map.of(
+                        "pattern",
+                        Schema.builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+
+                        "jungianConcept",
+                        Schema.builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+
+                        "interpretation",
+                        Schema.builder()
+                                .type(Type.Known.STRING)
+                                .build()
+                ))
+                .required(List.of(
+                        "pattern",
+                        "interpretation"
+                ))
+                .build();
+
+        return Schema.builder()
+                .type(Type.Known.OBJECT)
+                .properties(Map.of(
+                        "weeklySummary",
+                        Schema.builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+
+                        "themes",
+                        Schema.builder()
+                                .type(Type.Known.ARRAY)
+                                .items(themeSchema)
+                                .build(),
+
+                        "emotionalPatterns",
+                        Schema.builder()
+                                .type(Type.Known.ARRAY)
+                                .items(emotionalPatternSchema)
+                                .build()
+                ))
+                .required(List.of(
+                        "weeklySummary",
+                        "themes",
+                        "emotionalPatterns"
+                ))
+                .build();
+    }
 
     private Schema buildDreamSchema() {
 

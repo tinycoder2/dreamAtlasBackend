@@ -78,6 +78,12 @@
             <artifactId>google-oauth-client-jetty</artifactId>
             <version>1.39.0</version>
         </dependency>
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot3-dotenv</artifactId>
+            <version>5.1.0</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>

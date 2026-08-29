@@ -18,6 +18,16 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+
+        String requestUri = request.getRequestURI();
+
+        // Google OAuth callback does not contain a Firebase token.
+        // The OAuth state parameter authenticates the callback flow.
+        if (requestUri.equals("/api/health/google/callback")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;

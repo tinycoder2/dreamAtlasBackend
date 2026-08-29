@@ -19,6 +19,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class GoogleHealthOAuthService {
+    @Value("${google.health.client-id}")
+    private String clientId;
+
+    @Value("${google.health.client-secret}")
+    private String clientSecret;
+
+    @Value("${google.health.redirect-uri}")
+    private String redirectUri;
 
     private static final String AUTHORIZATION_ENDPOINT =
             "https://accounts.google.com/o/oauth2/v2/auth";
@@ -44,14 +52,8 @@ public class GoogleHealthOAuthService {
     private final Map<String, String> oauthStates =
             new ConcurrentHashMap<>();
 
-    @Value("${google.health.client-id}")
-    private String clientId;
-
-    @Value("${google.health.client-secret}")
-    private String clientSecret;
-
-    @Value("${google.health.redirect-uri}")
-    private String redirectUri;
+    private final Map<String, GoogleTokenResponse> connections =
+            new ConcurrentHashMap<>();
 
     public String createState(String firebaseUid) {
 
@@ -100,6 +102,17 @@ public class GoogleHealthOAuthService {
                 code,
                 redirectUri
         ).execute();
+    }
+
+    public void storeConnection(
+            String firebaseUid,
+            GoogleTokenResponse tokenResponse
+    ) {
+        connections.put(firebaseUid, tokenResponse);
+    }
+
+    public GoogleTokenResponse getConnection(String firebaseUid) {
+        return connections.get(firebaseUid);
     }
 
     private String encode(String value) {

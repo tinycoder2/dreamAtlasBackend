@@ -1,6 +1,7 @@
 package com.example.dreamjournal.health.controller;
 
 import com.example.dreamjournal.health.service.GoogleHealthOAuthService;
+import com.example.dreamjournal.health.service.GoogleHealthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,11 +13,13 @@ import java.util.Map;
 public class HealthController {
 
     private final GoogleHealthOAuthService googleHealthOAuthService;
+    private final GoogleHealthService googleHealthService;
 
     public HealthController(
-            GoogleHealthOAuthService googleHealthOAuthService
+            GoogleHealthOAuthService googleHealthOAuthService, GoogleHealthService googleHealthService
     ) {
         this.googleHealthOAuthService = googleHealthOAuthService;
+        this.googleHealthService = googleHealthService;
     }
 
     @GetMapping("/google/connect")
@@ -85,6 +88,10 @@ public class HealthController {
                     "Refresh token received: "
                             + hasRefreshToken
             );
+            googleHealthOAuthService.storeConnection(
+                    firebaseUid,
+                    tokenResponse
+            );
 
             googleHealthOAuthService.removeState(state);
 
@@ -105,6 +112,26 @@ public class HealthController {
                             "message", "Failed to exchange authorization code"
                     )
             );
+        }
+    }
+
+    @GetMapping("/google/identity")
+    public ResponseEntity<String> getGoogleHealthIdentity(
+            @RequestAttribute("firebaseUid") String firebaseUid
+    ) {
+
+        try {
+
+            String identity =
+                    googleHealthService.getIdentity(firebaseUid);
+
+            return ResponseEntity.ok(identity);
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .body(e.getMessage());
         }
     }
 }

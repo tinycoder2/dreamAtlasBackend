@@ -134,4 +134,29 @@ public class HealthController {
                     .body(e.getMessage());
         }
     }
+
+    @GetMapping("/google/sleep/raw")
+    public ResponseEntity<String> getRawSleep(
+            @RequestAttribute("firebaseUid") String firebaseUid,
+            @RequestParam String start,
+            @RequestParam String end
+    ) {
+
+        try {
+            String response =
+                    googleHealthService.getSleepRaw(
+                            firebaseUid,
+                            start,
+                            end
+                    );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .body(e.getMessage());
+        }
+    }
 }

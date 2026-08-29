@@ -76,4 +76,71 @@ public class GoogleHealthService {
 
         return response.body();
     }
+
+    public String getSleepRaw(
+            String firebaseUid,
+            String start,
+            String end
+    ) throws Exception {
+
+        GoogleTokenResponse token =
+                oauthService.getConnection(firebaseUid);
+
+        if (token == null) {
+            throw new IllegalStateException(
+                    "Google Health is not connected"
+            );
+        }
+
+        String filter =
+                "sleep.interval.end_time >= \"" + start + "\""
+                        + " AND "
+                        + "sleep.interval.end_time < \"" + end + "\"";
+
+        String encodedFilter =
+                java.net.URLEncoder.encode(
+                        filter,
+                        java.nio.charset.StandardCharsets.UTF_8
+                );
+
+        String url =
+                HEALTH_API_BASE
+                        + "/users/me/dataTypes/sleep/dataPoints"
+                        + "?pageSize=25"
+                        + "&filter="
+                        + encodedFilter;
+
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header(
+                                "Authorization",
+                                "Bearer " + token.getAccessToken()
+                        )
+                        .header(
+                                "Accept",
+                                "application/json"
+                        )
+                        .GET()
+                        .build();
+
+        HttpResponse<String> response =
+                httpClient.send(
+                        request,
+                        HttpResponse.BodyHandlers.ofString()
+                );
+
+        if (response.statusCode() < 200 ||
+                response.statusCode() >= 300) {
+
+            throw new RuntimeException(
+                    "Google Health API returned "
+                            + response.statusCode()
+                            + ": "
+                            + response.body()
+            );
+        }
+
+        return response.body();
+    }
 }

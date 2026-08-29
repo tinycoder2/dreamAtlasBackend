@@ -159,4 +159,30 @@ public class HealthController {
                     .body(e.getMessage());
         }
     }
+
+    @GetMapping("/google/heart-rate/raw")
+    public ResponseEntity<String> getRawHeartRate(
+            @RequestAttribute("firebaseUid") String firebaseUid,
+            @RequestParam String start,
+            @RequestParam String end
+    ) {
+
+        try {
+
+            String response =
+                    googleHealthService.getHeartRateRaw(
+                            firebaseUid,
+                            start,
+                            end
+                    );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .body(e.getMessage());
+        }
+    }
 }

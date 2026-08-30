@@ -1,11 +1,14 @@
 package com.example.dreamjournal.health.controller;
 
+import com.example.dreamjournal.health.model.SleepHealthData;
 import com.example.dreamjournal.health.service.GoogleHealthOAuthService;
 import com.example.dreamjournal.health.service.GoogleHealthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -183,6 +186,32 @@ public class HealthController {
             return ResponseEntity
                     .internalServerError()
                     .body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/google/sleep-health")
+    public ResponseEntity<List<SleepHealthData>> getSleepHealthData(
+            @RequestAttribute("firebaseUid") String firebaseUid,
+            @RequestParam String start,
+            @RequestParam String end
+    ) {
+
+        try {
+
+            List<SleepHealthData> result =
+                    googleHealthService.getSleepHealthData(
+                            firebaseUid,
+                            Instant.parse(start),
+                            Instant.parse(end)
+                    );
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .build();
         }
     }
 }

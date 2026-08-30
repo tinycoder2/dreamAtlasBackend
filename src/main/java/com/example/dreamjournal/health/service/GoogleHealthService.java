@@ -307,7 +307,7 @@ public class GoogleHealthService {
                     );
 
             result.add(
-                    new SleepHealthData(
+                    new SleepHealthData(firebaseUid,
                             sleep,
                             heartRate
                     )

@@ -3,6 +3,7 @@ package com.example.dreamjournal.health.controller;
 import com.example.dreamjournal.health.model.SleepHealthData;
 import com.example.dreamjournal.health.service.GoogleHealthOAuthService;
 import com.example.dreamjournal.health.service.GoogleHealthService;
+import com.example.dreamjournal.health.service.HealthIngestionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,12 +18,16 @@ public class HealthController {
 
     private final GoogleHealthOAuthService googleHealthOAuthService;
     private final GoogleHealthService googleHealthService;
+    private final HealthIngestionService healthIngestionService;
 
     public HealthController(
-            GoogleHealthOAuthService googleHealthOAuthService, GoogleHealthService googleHealthService
+            GoogleHealthOAuthService googleHealthOAuthService,
+            GoogleHealthService googleHealthService,
+            HealthIngestionService healthIngestionService
     ) {
         this.googleHealthOAuthService = googleHealthOAuthService;
         this.googleHealthService = googleHealthService;
+        this.healthIngestionService = healthIngestionService;
     }
 
     @GetMapping("/google/connect")
@@ -212,6 +217,46 @@ public class HealthController {
             return ResponseEntity
                     .internalServerError()
                     .build();
+        }
+    }
+    @PostMapping("/google/ingest")
+    public ResponseEntity<Map<String, Object>> ingestHealth(
+            @RequestAttribute("firebaseUid") String firebaseUid
+    ) {
+
+        try {
+
+            List<SleepHealthData> result =
+                    healthIngestionService.ingest(firebaseUid);
+
+            int sleepCount = result.size();
+
+            int heartRateCount =
+                    result.stream()
+                            .mapToInt(data ->
+                                    data.heartRate().size()
+                            )
+                            .sum();
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "status", "success",
+                            "sleepSessions", sleepCount,
+                            "heartRateSamples", heartRateCount
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .body(
+                            Map.of(
+                                    "status", "error",
+                                    "message",
+                                    "Health ingestion failed"
+                            )
+                    );
         }
     }
 }

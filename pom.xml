@@ -84,6 +84,14 @@
             <version>5.1.0</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquerystorage</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

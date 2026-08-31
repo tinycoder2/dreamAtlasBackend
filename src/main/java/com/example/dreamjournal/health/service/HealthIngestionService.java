@@ -4,6 +4,7 @@ import com.example.dreamjournal.health.model.HealthIngestionState;
 import com.example.dreamjournal.health.model.HeartRateSample;
 import com.example.dreamjournal.health.model.SleepHealthData;
 import com.example.dreamjournal.health.model.SleepSession;
+import com.example.dreamjournal.health.repository.BigQueryHealthRepository;
 import com.example.dreamjournal.health.repository.HealthIngestionStateRepository;
 import org.springframework.stereotype.Service;
 
@@ -22,23 +23,23 @@ public class HealthIngestionService {
             Duration.ofHours(24);
 
     private final GoogleHealthService googleHealthService;
-
     private final HealthIngestionStateRepository stateRepository;
-
     private final HealthDataValidator validator;
-
     private final HealthSourcePolicy sourcePolicy;
+    private final BigQueryHealthRepository bigQueryHealthRepository;
 
     public HealthIngestionService(
             GoogleHealthService googleHealthService,
             HealthIngestionStateRepository stateRepository,
             HealthDataValidator validator,
-            HealthSourcePolicy sourcePolicy
+            HealthSourcePolicy sourcePolicy,
+            BigQueryHealthRepository bigQueryHealthRepository
     ) {
         this.googleHealthService = googleHealthService;
         this.stateRepository = stateRepository;
         this.validator = validator;
         this.sourcePolicy = sourcePolicy;
+        this.bigQueryHealthRepository = bigQueryHealthRepository;
     }
 
     public List<SleepHealthData> ingest(
@@ -86,27 +87,32 @@ public class HealthIngestionService {
 
             List<HeartRateSample> validHeartRate =
                     heartRate.stream()
-                            .filter(
-                                    validator::isValidHeartRate
-                            )
-                            .filter(
-                                    sourcePolicy::includeHeartRate
-                            )
+                            .filter(validator::isValidHeartRate)
+                            .filter(sourcePolicy::includeHeartRate)
                             .toList();
 
             result.add(
-                    new SleepHealthData(firebaseUid,
+                    new SleepHealthData(
+                            firebaseUid,
                             sleep,
                             validHeartRate
                     )
             );
         }
 
-        /*
-         * IMPORTANT:
-         * Only advance the checkpoint if the complete
-         * ingestion succeeded.
-         */
+        // ------------------------------------------
+        // Persist first.
+        // ------------------------------------------
+
+        if (!result.isEmpty()) {
+            bigQueryHealthRepository.save(result);
+        }
+
+        // ------------------------------------------
+        // Only advance checkpoint after persistence
+        // succeeds.
+        // ------------------------------------------
+
         stateRepository.save(
                 new HealthIngestionState(
                         firebaseUid,

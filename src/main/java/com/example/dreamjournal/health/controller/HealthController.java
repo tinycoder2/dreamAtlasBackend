@@ -220,7 +220,7 @@ public class HealthController {
                     .build();
         }
     }
-    @GetMapping("/google/ingest")
+    @PostMapping("/google/ingest")
     public ResponseEntity<IngestionResult> ingestHealthData(
             @RequestAttribute("firebaseUid") String firebaseUid
     ) {

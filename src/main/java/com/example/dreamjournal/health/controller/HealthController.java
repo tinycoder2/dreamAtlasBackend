@@ -1,5 +1,6 @@
 package com.example.dreamjournal.health.controller;
 
+import com.example.dreamjournal.health.model.IngestionResult;
 import com.example.dreamjournal.health.model.SleepHealthData;
 import com.example.dreamjournal.health.service.GoogleHealthOAuthService;
 import com.example.dreamjournal.health.service.GoogleHealthService;
@@ -219,44 +220,22 @@ public class HealthController {
                     .build();
         }
     }
-    @PostMapping("/google/ingest")
-    public ResponseEntity<Map<String, Object>> ingestHealth(
+    @GetMapping("/google/ingest")
+    public ResponseEntity<IngestionResult> ingestHealthData(
             @RequestAttribute("firebaseUid") String firebaseUid
     ) {
-
         try {
 
-            List<SleepHealthData> result =
+            IngestionResult result =
                     healthIngestionService.ingest(firebaseUid);
 
-            int sleepCount = result.size();
-
-            int heartRateCount =
-                    result.stream()
-                            .mapToInt(data ->
-                                    data.heartRate().size()
-                            )
-                            .sum();
-
-            return ResponseEntity.ok(
-                    Map.of(
-                            "status", "success",
-                            "sleepSessions", sleepCount,
-                            "heartRateSamples", heartRateCount
-                    )
-            );
+            return ResponseEntity.ok(result);
 
         } catch (Exception e) {
 
             return ResponseEntity
                     .internalServerError()
-                    .body(
-                            Map.of(
-                                    "status", "error",
-                                    "message",
-                                    "Health ingestion failed"
-                            )
-                    );
+                    .build();
         }
     }
 }

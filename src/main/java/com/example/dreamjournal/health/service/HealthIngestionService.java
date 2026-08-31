@@ -1,11 +1,9 @@
 package com.example.dreamjournal.health.service;
 
-import com.example.dreamjournal.health.model.HealthIngestionState;
-import com.example.dreamjournal.health.model.HeartRateSample;
-import com.example.dreamjournal.health.model.SleepHealthData;
-import com.example.dreamjournal.health.model.SleepSession;
+import com.example.dreamjournal.health.model.*;
 import com.example.dreamjournal.health.repository.BigQueryHealthRepository;
 import com.example.dreamjournal.health.repository.HealthIngestionStateRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -15,6 +13,9 @@ import java.util.List;
 
 @Service
 public class HealthIngestionService {
+
+    @Value("${health.ingestion.minimum-interval-hours:12}")
+    private long minimumIntervalHours;
 
     private static final Duration INITIAL_LOOKBACK =
             Duration.ofDays(7);
@@ -42,21 +43,42 @@ public class HealthIngestionService {
         this.bigQueryHealthRepository = bigQueryHealthRepository;
     }
 
-    public List<SleepHealthData> ingest(
+    public IngestionResult ingest(
             String firebaseUid
     ) throws Exception {
 
         Instant now = Instant.now();
 
+        var existingState =
+                stateRepository.find(firebaseUid);
+
+        if (existingState.isPresent()) {
+
+            Instant lastSuccessfulRun =
+                    existingState.get().lastSuccessfulRun();
+
+            Instant nextAllowedRun =
+                    lastSuccessfulRun.plus(
+                            Duration.ofHours(minimumIntervalHours)
+                    );
+
+            if (now.isBefore(nextAllowedRun)) {
+                return new IngestionResult(
+                        "skipped",
+                        "INGESTION_TOO_RECENT",
+                        0,
+                        0,
+                        lastSuccessfulRun,
+                        nextAllowedRun
+                );
+            }
+        }
+
         Instant start =
-                stateRepository.find(firebaseUid)
+                existingState
                         .map(HealthIngestionState::lastSuccessfulRun)
-                        .map(time ->
-                                time.minus(SAFETY_OVERLAP)
-                        )
-                        .orElse(
-                                now.minus(INITIAL_LOOKBACK)
-                        );
+                        .map(time -> time.minus(SAFETY_OVERLAP))
+                        .orElse(now.minus(INITIAL_LOOKBACK));
 
         List<SleepSession> sleeps =
                 googleHealthService.getSleepSessions(
@@ -111,7 +133,7 @@ public class HealthIngestionService {
         // ------------------------------------------
         // Only advance checkpoint after persistence
         // succeeds.
-        // ------------------------------------------
+        // ------------------------------------------ß
 
         stateRepository.save(
                 new HealthIngestionState(
@@ -120,6 +142,15 @@ public class HealthIngestionService {
                 )
         );
 
-        return result;
+        // ------------------------------------------ // Calculate next allowed ingestion // ------------------------------------------
+        Instant nextAllowedRun = now.plus(Duration.ofHours(minimumIntervalHours));
+        int sleepSessionCount = result.size();
+        int heartRateSampleCount = result.stream().mapToInt(data -> data.heartRate().size()).sum();
+        return new IngestionResult("success",
+                null,
+                sleepSessionCount,
+                heartRateSampleCount,
+                now,
+                nextAllowedRun);
     }
 }

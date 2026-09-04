@@ -1,14 +1,12 @@
 package com.example.dreamjournal.health.repository.bigquery;
 
-import com.example.dreamjournal.health.model.HeartRateSample;
-import com.example.dreamjournal.health.model.SleepHealthData;
-import com.example.dreamjournal.health.model.SleepSession;
-import com.example.dreamjournal.health.model.SleepStage;
+import com.example.dreamjournal.health.model.*;
 import com.example.dreamjournal.health.repository.BigQueryHealthRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,11 +18,41 @@ public class BigQueryHealthRepositoryImpl
         implements BigQueryHealthRepository {
 
     private final BigQueryStorageWriter storageWriter;
+    private final BigQueryHealthReader healthReader;
 
     public BigQueryHealthRepositoryImpl(
-            BigQueryStorageWriter storageWriter
+            BigQueryStorageWriter storageWriter,
+            BigQueryHealthReader healthReader
     ) {
         this.storageWriter = storageWriter;
+        this.healthReader = healthReader;
+    }
+
+    @Override
+    public List<SleepSessionMetrics> findSleepSessionMetrics(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        try {
+            return healthReader.findSleepSessionMetrics(
+                    userId,
+                    startDate,
+                    endDate
+            );
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            throw new IllegalStateException(
+                    "Interrupted while querying sleep session metrics",
+                    e
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to query sleep session metrics",
+                    e
+            );
+        }
     }
 
     @Override

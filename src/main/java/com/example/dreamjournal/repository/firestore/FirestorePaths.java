@@ -6,7 +6,7 @@ import com.google.cloud.firestore.Firestore;
 
 import java.time.LocalDate;
 
-final class FirestorePaths {
+public final class FirestorePaths {
 
     private FirestorePaths() {
     }
@@ -29,5 +29,15 @@ final class FirestorePaths {
         return firestore.collection("users")
                 .document(userId)
                 .collection("weeklyInsights");
+    }
+    public static DocumentReference healthIngestionState(
+            Firestore firestore,
+            String firebaseUid
+    ) {
+        return firestore
+                .collection("users")
+                .document(firebaseUid)
+                .collection("healthIngestion")
+                .document("state");
     }
 }

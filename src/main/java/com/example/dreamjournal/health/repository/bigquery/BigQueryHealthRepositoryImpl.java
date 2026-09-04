@@ -27,6 +27,32 @@ public class BigQueryHealthRepositoryImpl
         this.storageWriter = storageWriter;
         this.healthReader = healthReader;
     }
+    @Override
+    public List<DailyDreamSleep> findDailyDreamSleep(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        try {
+            return healthReader.findDailyDreamSleep(
+                    userId,
+                    startDate,
+                    endDate
+            );
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            throw new IllegalStateException(
+                    "Interrupted while querying daily dream sleep",
+                    e
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to query daily dream sleep",
+                    e
+            );
+        }
+    }
 
     @Override
     public List<SleepSessionMetrics> findSleepSessionMetrics(

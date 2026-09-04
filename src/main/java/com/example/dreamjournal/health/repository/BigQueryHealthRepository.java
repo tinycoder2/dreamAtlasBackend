@@ -1,5 +1,6 @@
 package com.example.dreamjournal.health.repository;
 
+import com.example.dreamjournal.health.model.DailyDreamSleep;
 import com.example.dreamjournal.health.model.SleepHealthData;
 import com.example.dreamjournal.health.model.SleepSessionMetrics;
 
@@ -13,6 +14,12 @@ public interface BigQueryHealthRepository {
     );
 
     List<SleepSessionMetrics> findSleepSessionMetrics(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
+
+    List<DailyDreamSleep> findDailyDreamSleep(
             String userId,
             LocalDate startDate,
             LocalDate endDate

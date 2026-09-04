@@ -1,5 +1,6 @@
 package com.example.dreamjournal.health.repository.bigquery;
 
+import com.example.dreamjournal.health.model.DailyDreamSleep;
 import com.example.dreamjournal.health.model.SleepSessionMetrics;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValueList;
@@ -29,6 +30,91 @@ public class BigQueryHealthReader {
         this.bigQuery = bigQuery;
         this.projectId = projectId;
         this.dataset = dataset;
+    }
+
+    public List<DailyDreamSleep> findDailyDreamSleep(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) throws InterruptedException {
+
+        String sql = """
+        SELECT
+          journal_date,
+          dream_count,
+          great_dreams,
+          good_dreams,
+          neutral_dreams,
+          bad_dreams,
+          nightmares,
+          lucid_dreams,
+          vivid_dreams,
+          recurring_dreams,
+          minutes_asleep,
+          minutes_awake,
+          deep_minutes,
+          light_minutes,
+          rem_minutes,
+          mean_hr,
+          min_hr,
+          max_hr,
+          hr_stddev
+        FROM `%s`
+        WHERE user_id = @userId
+          AND journal_date BETWEEN @startDate AND @endDate
+        ORDER BY journal_date ASC
+        """.formatted(
+                projectId + ".dream_atlas_health.daily_dream_sleep"
+        );
+
+        QueryJobConfiguration queryConfig =
+                QueryJobConfiguration.newBuilder(sql)
+                        .addNamedParameter(
+                                "userId",
+                                QueryParameterValue.string(userId)
+                        )
+                        .addNamedParameter(
+                                "startDate",
+                                QueryParameterValue.date(startDate.toString())
+                        )
+                        .addNamedParameter(
+                                "endDate",
+                                QueryParameterValue.date(endDate.toString())
+                        )
+                        .build();
+
+        TableResult result =
+                bigQuery.query(queryConfig);
+
+        List<DailyDreamSleep> rows = new ArrayList<>();
+
+        for (FieldValueList row : result.iterateAll()) {
+            rows.add(new DailyDreamSleep(
+                    LocalDate.parse(
+                            row.get("journal_date").getStringValue()
+                    ),
+                    (int) row.get("dream_count").getLongValue(),
+                    (int) row.get("great_dreams").getLongValue(),
+                    (int) row.get("good_dreams").getLongValue(),
+                    (int) row.get("neutral_dreams").getLongValue(),
+                    (int) row.get("bad_dreams").getLongValue(),
+                    (int) row.get("nightmares").getLongValue(),
+                    (int) row.get("lucid_dreams").getLongValue(),
+                    (int) row.get("vivid_dreams").getLongValue(),
+                    (int) row.get("recurring_dreams").getLongValue(),
+                    nullableInteger(row, "minutes_asleep"),
+                    nullableInteger(row, "minutes_awake"),
+                    nullableInteger(row, "deep_minutes"),
+                    nullableInteger(row, "light_minutes"),
+                    nullableInteger(row, "rem_minutes"),
+                    nullableDouble(row, "mean_hr"),
+                    nullableInteger(row, "min_hr"),
+                    nullableInteger(row, "max_hr"),
+                    nullableDouble(row, "hr_stddev")
+            ));
+        }
+
+        return rows;
     }
 
     public List<SleepSessionMetrics> findSleepSessionMetrics(

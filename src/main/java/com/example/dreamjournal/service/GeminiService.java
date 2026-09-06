@@ -23,12 +23,12 @@ public class GeminiService {
     private final Client client;
     private final Schema dreamSchema;
 
-    public GeminiService(ObjectMapper objectMapper) {
+    public GeminiService(
+            ObjectMapper objectMapper,
+            Client client
+    ) {
         this.objectMapper = objectMapper;
-
-        this.client = Client.builder()
-                .vertexAI(true)
-                .build();
+        this.client = client;
 
         this.dreamSchema = buildDreamSchema();
     }

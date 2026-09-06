@@ -20,13 +20,4 @@ public class AnalyticsTestController {
     ) {
         this.bigQueryAgentService = bigQueryAgentService;
     }
-
-    @GetMapping
-    public ResponseEntity<String> test(
-            @RequestParam(defaultValue = "How many sleep sessions are available?") String question
-    ) throws IOException {
-        return ResponseEntity.ok(
-                bigQueryAgentService.testChat(question)
-        );
-    }
 }

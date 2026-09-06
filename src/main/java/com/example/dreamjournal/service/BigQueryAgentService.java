@@ -20,6 +20,7 @@ public class BigQueryAgentService {
         this.config = config;
     }
 
+    /**
     public String testChat(String question) throws IOException {
 
         DataAgentContext agentContext =
@@ -71,5 +72,5 @@ public class BigQueryAgentService {
         }
 
         return answer.toString();
-    }
+    }**/
 }

@@ -1,9 +1,13 @@
 package com.example.dreamjournal.service;
 
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.util.TablesNamesFinder;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 @Service
 public class AnalyticsSqlValidator {
@@ -14,40 +18,12 @@ public class AnalyticsSqlValidator {
     private static final String DATASET =
             "dream_atlas_health";
 
-    private static final Pattern ALLOWED_TABLE =
-            Pattern.compile(
-                    "`" + Pattern.quote(PROJECT)
-                            + "\\."
-                            + Pattern.quote(DATASET)
-                            + "\\."
-                            + "(dreams_analytical|daily_dream_sleep|sleep_session_metrics|dreams_for_ai)"
-                            + "`",
-                    Pattern.CASE_INSENSITIVE
-            );
-
-    private static final Pattern FORBIDDEN_OPERATION =
-            Pattern.compile(
-                    "\\b("
-                            + "insert|update|delete|merge|create|drop|alter|truncate|"
-                            + "grant|revoke|call|execute|replace|export|"
-                            + "declare|set"
-                            + ")\\b",
-                    Pattern.CASE_INSENSITIVE
-            );
-
-    private static final Pattern FORBIDDEN_SOURCE =
-            Pattern.compile(
-                    "("
-                            + "information_schema"
-                            + "|session_user"
-                            + "|current_user"
-                            + "|system\\.\\w+"
-                            + ")",
-                    Pattern.CASE_INSENSITIVE
-            );
-
-    private static final Pattern MULTI_STATEMENT =
-            Pattern.compile(";\\s*\\S", Pattern.DOTALL);
+    private static final Set<String> ALLOWED_TABLES = Set.of(
+            PROJECT + "." + DATASET + ".dreams_analytical",
+            PROJECT + "." + DATASET + ".daily_dream_sleep",
+            PROJECT + "." + DATASET + ".sleep_session_metrics",
+            PROJECT + "." + DATASET + ".dreams_for_ai"
+    );
 
     public void validate(String sql) {
 
@@ -57,95 +33,125 @@ public class AnalyticsSqlValidator {
             );
         }
 
-        String normalized =
-                sql.trim()
-                        .toLowerCase(Locale.ROOT);
+        String cleanedSql = sql.trim();
 
         /*
-         * 1. Must start with SELECT.
-         */
-        if (!normalized.startsWith("select ")) {
-            throw new IllegalArgumentException(
-                    "Only SELECT queries are allowed"
-            );
-        }
-
-        /*
-         * 2. Only one SQL statement.
+         * Reject multiple SQL statements.
          *
          * A single trailing semicolon is allowed.
          */
-        String withoutTrailingSemicolon =
-                normalized.endsWith(";")
-                        ? normalized.substring(
+        String sqlWithoutTrailingSemicolon =
+                cleanedSql.endsWith(";")
+                        ? cleanedSql.substring(
                         0,
-                        normalized.length() - 1
+                        cleanedSql.length() - 1
                 ).trim()
-                        : normalized;
+                        : cleanedSql;
 
-        if (MULTI_STATEMENT.matcher(
-                withoutTrailingSemicolon
-        ).find()) {
+        if (sqlWithoutTrailingSemicolon.contains(";")) {
             throw new IllegalArgumentException(
                     "Multiple SQL statements are not allowed"
             );
         }
 
-        /*
-         * 3. Block mutation, DDL and scripting.
-         */
-        if (FORBIDDEN_OPERATION.matcher(normalized).find()) {
-            throw new IllegalArgumentException(
-                    "Forbidden SQL operation"
-            );
-        }
 
-        /*
-         * 4. Block system / identity-based access.
-         */
-        if (FORBIDDEN_SOURCE.matcher(normalized).find()) {
-            throw new IllegalArgumentException(
-                    "Forbidden SQL source or identity function"
-            );
-        }
+        try {
 
-        /*
-         * 5. Query must reference at least one approved table.
-         */
-        if (!ALLOWED_TABLE.matcher(sql).find()) {
-            throw new IllegalArgumentException(
-                    "Query references an unauthorized data source"
-            );
-        }
+            /*
+             * Parse the SQL into an AST.
+             *
+             * We intentionally don't use withDialect() here.
+             * The normal parser already handles the BigQuery SQL
+             * Gemini is currently generating.
+             */
+            Statement statement =
+                    CCJSqlParserUtil.parse(cleanedSql);
 
-        /*
-         * 6. Reject references to other projects/datasets.
-         *
-         * Gemini must only access the Dream Atlas dataset.
-         */
-        Pattern anyQualifiedTable =
-                Pattern.compile(
-                        "`[^`]+\\.[^`]+\\.[^`]+`",
-                        Pattern.CASE_INSENSITIVE
-                );
-
-        var matches =
-                anyQualifiedTable.matcher(sql);
-
-        while (matches.find()) {
-
-            String tableReference =
-                    matches.group();
-
-            if (!ALLOWED_TABLE.matcher(
-                    tableReference
-            ).matches()) {
-
+            /*
+             * Only SELECT statements are allowed.
+             */
+            if (!(statement instanceof Select)) {
                 throw new IllegalArgumentException(
-                        "Query references an unauthorized table: "
-                                + tableReference
+                        "Only SELECT queries are allowed"
                 );
             }
+
+            /*
+             * Find every table referenced by the parsed query.
+             *
+             * This also walks nested queries.
+             */
+            Set<String> referencedTables =
+                    TablesNamesFinder.findTables(statement.toString());
+
+            if (referencedTables.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Query does not reference an approved data source"
+                );
+            }
+
+            /*
+             * Every referenced table must be one of our
+             * four approved analytical sources.
+             */
+            for (String table : referencedTables) {
+
+                String normalizedTable =
+                        normalizeTableName(table);
+
+                if (!ALLOWED_TABLES.contains(normalizedTable)) {
+                    throw new IllegalArgumentException(
+                            "Query references unauthorized table: "
+                                    + table
+                    );
+                }
+            }
+
+            /*
+             * Identity-based access is never allowed.
+             *
+             * User isolation is enforced by the backend using
+             * the Firebase UID.
+             */
+            String normalizedSql =
+                    cleanedSql.toLowerCase(Locale.ROOT);
+
+            if (normalizedSql.contains("session_user")
+                    || normalizedSql.contains("current_user")) {
+
+                throw new IllegalArgumentException(
+                        "Identity functions are not allowed"
+                );
+            }
+
+            /*
+             * Never allow BigQuery system metadata.
+             */
+            if (normalizedSql.contains("information_schema")) {
+                throw new IllegalArgumentException(
+                        "System metadata is not allowed"
+                );
+            }
+
+        } catch (IllegalArgumentException e) {
+
+            throw e;
+
+        } catch (Exception e) {
+
+            throw new IllegalArgumentException(
+                    "Invalid or unsupported SQL generated by Gemini",
+                    e
+            );
         }
+    }
+
+    private String normalizeTableName(String table) {
+
+        return table
+                .replace("`", "")
+                .replace("\"", "")
+                .trim()
+                .toLowerCase(Locale.ROOT);
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
+import com.google.cloud.firestore.SetOptions;
 
 @Repository
 public class FirestoreHealthIngestionStateRepository
@@ -83,9 +84,9 @@ public class FirestoreHealthIngestionStateRepository
             document.set(
                     java.util.Map.of(
                             "lastSuccessfulRun",
-                            state.lastSuccessfulRun()
-                                    .toString()
-                    )
+                            state.lastSuccessfulRun().toString()
+                    ),
+                    SetOptions.merge()
             ).get();
 
         } catch (Exception e) {

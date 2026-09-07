@@ -12,6 +12,9 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/health")
@@ -20,7 +23,10 @@ public class HealthController {
     private final GoogleHealthOAuthService googleHealthOAuthService;
     private final GoogleHealthService googleHealthService;
     private final HealthIngestionService healthIngestionService;
-
+    private static final Logger log =
+            LoggerFactory.getLogger(HealthController.class);
+    @Value("${google.health.app-callback-uri}")
+    private String googleHealthAppCallbackUri;
     public HealthController(
             GoogleHealthOAuthService googleHealthOAuthService,
             GoogleHealthService googleHealthService,
@@ -47,9 +53,21 @@ public class HealthController {
                 .location(URI.create(authorizationUrl))
                 .build();
     }
+    private ResponseEntity<Void> redirectToApp(String status) {
 
+        URI redirectUri = URI.create(
+                googleHealthAppCallbackUri
+                        + "?status="
+                        + status
+        );
+
+        return ResponseEntity
+                .status(302)
+                .location(redirectUri)
+                .build();
+    }
     @GetMapping("/google/callback")
-    public ResponseEntity<Map<String, String>> googleCallback(
+    public ResponseEntity<Void> googleCallback(
             @RequestParam String code,
             @RequestParam String state
     ) {
@@ -58,12 +76,7 @@ public class HealthController {
                 googleHealthOAuthService.getFirebaseUidForState(state);
 
         if (firebaseUid == null) {
-            return ResponseEntity.badRequest().body(
-                    Map.of(
-                            "status", "error",
-                            "message", "Invalid or expired OAuth state"
-                    )
-            );
+            return redirectToApp("error");
         }
 
         try {
@@ -74,29 +87,29 @@ public class HealthController {
             // IMPORTANT:
             // Do not log either token.
 
-            System.out.println(
-                    "Google Health OAuth successful for Firebase UID: "
-                            + firebaseUid
+            log.info(
+                    "Google Health OAuth successful for Firebase UID: {}",
+                    firebaseUid
             );
 
-            System.out.println(
-                    "Granted scopes: "
-                            + tokenResponse.getScope()
+            log.info(
+                    "Granted scopes: {}",
+                    tokenResponse.getScope()
             );
 
-            System.out.println(
-                    "Access token expires in: "
-                            + tokenResponse.getExpiresInSeconds()
-                            + " seconds"
+            log.info(
+                    "Access token expires in: {} seconds",
+                    tokenResponse.getExpiresInSeconds()
             );
 
             boolean hasRefreshToken =
                     tokenResponse.getRefreshToken() != null;
 
-            System.out.println(
-                    "Refresh token received: "
-                            + hasRefreshToken
+            log.info(
+                    "Refresh token received: {}",
+                    hasRefreshToken
             );
+
             googleHealthOAuthService.storeConnection(
                     firebaseUid,
                     tokenResponse
@@ -104,23 +117,19 @@ public class HealthController {
 
             googleHealthOAuthService.removeState(state);
 
-            return ResponseEntity.ok(
-                    Map.of(
-                            "status", "connected",
-                            "message", "Google Health authorization successful"
-                    )
-            );
+            return redirectToApp("connected");
 
         } catch (Exception e) {
 
             googleHealthOAuthService.removeState(state);
 
-            return ResponseEntity.internalServerError().body(
-                    Map.of(
-                            "status", "error",
-                            "message", "Failed to exchange authorization code"
-                    )
+            log.error(
+                    "Google Health OAuth callback failed for Firebase UID: {}",
+                    firebaseUid,
+                    e
             );
+
+            return redirectToApp("error");
         }
     }
 
@@ -220,22 +229,50 @@ public class HealthController {
                     .build();
         }
     }
+
     @PostMapping("/google/ingest")
     public ResponseEntity<IngestionResult> ingestHealthData(
             @RequestAttribute("firebaseUid") String firebaseUid
     ) {
         try {
-
             IngestionResult result =
                     healthIngestionService.ingest(firebaseUid);
 
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-
-            return ResponseEntity
-                    .internalServerError()
-                    .build();
+            log.error(
+                    "Health ingestion failed for Firebase UID: {}",
+                    firebaseUid,
+                    e
+            );
+            return ResponseEntity.internalServerError().build();
         }
+    }
+    @GetMapping("/google/status")
+    public ResponseEntity<Map<String, Object>> getGoogleHealthStatus(
+            @RequestAttribute("firebaseUid") String firebaseUid
+    ) {
+        boolean connected =
+                googleHealthOAuthService.getConnection(firebaseUid) != null;
+
+        return ResponseEntity.ok(
+                Map.of("connected", connected)
+        );
+    }
+
+    @GetMapping("/google/connect-url")
+    public ResponseEntity<Map<String, String>> getGoogleHealthConnectUrl(
+            @RequestAttribute("firebaseUid") String firebaseUid
+    ) {
+        String state =
+                googleHealthOAuthService.createState(firebaseUid);
+
+        String authorizationUrl =
+                googleHealthOAuthService.buildAuthorizationUrl(state);
+
+        return ResponseEntity.ok(
+                Map.of("authorizationUrl", authorizationUrl)
+        );
     }
 }

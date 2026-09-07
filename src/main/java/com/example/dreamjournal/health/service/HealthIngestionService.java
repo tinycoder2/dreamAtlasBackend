@@ -43,24 +43,15 @@ public class HealthIngestionService {
         this.bigQueryHealthRepository = bigQueryHealthRepository;
     }
 
-    public IngestionResult ingest(
-            String firebaseUid
-    ) throws Exception {
-
+    public IngestionResult ingest(String firebaseUid) throws Exception {
         Instant now = Instant.now();
 
-        var existingState =
-                stateRepository.find(firebaseUid);
+        var existingState = stateRepository.find(firebaseUid);
 
         if (existingState.isPresent()) {
-
-            Instant lastSuccessfulRun =
-                    existingState.get().lastSuccessfulRun();
-
+            Instant lastSuccessfulRun = existingState.get().lastSuccessfulRun();
             Instant nextAllowedRun =
-                    lastSuccessfulRun.plus(
-                            Duration.ofHours(minimumIntervalHours)
-                    );
+                    lastSuccessfulRun.plus(Duration.ofHours(minimumIntervalHours));
 
             if (now.isBefore(nextAllowedRun)) {
                 return new IngestionResult(
@@ -73,19 +64,36 @@ public class HealthIngestionService {
                 );
             }
         }
-
         Instant start =
                 existingState
                         .map(HealthIngestionState::lastSuccessfulRun)
                         .map(time -> time.minus(SAFETY_OVERLAP))
                         .orElse(now.minus(INITIAL_LOOKBACK));
 
-        List<SleepSession> sleeps =
-                googleHealthService.getSleepSessions(
-                        firebaseUid,
-                        start,
-                        now
+        List<SleepSession> sleeps;
+
+        try {
+            sleeps = googleHealthService.getSleepSessions(
+                    firebaseUid,
+                    start,
+                    now
+            );
+        } catch (IllegalStateException e) {
+            if ("Google Health is not connected".equals(e.getMessage())) {
+                return new IngestionResult(
+                        "skipped",
+                        "GOOGLE_HEALTH_NOT_CONNECTED",
+                        0,
+                        0,
+                        existingState
+                                .map(HealthIngestionState::lastSuccessfulRun)
+                                .orElse(null),
+                        null
                 );
+            }
+
+            throw e;
+        }
 
         List<SleepHealthData> result =
                 new ArrayList<>();
